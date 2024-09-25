@@ -1,9 +1,9 @@
-import ChessBoard from "@/components/ChessBoard";
+import { ChessGame } from "@/components/chess-game"; // Import the ChessGame component
 
 export default function Home() {
   return (
     <>
-      <ChessBoard />
+      <ChessGame /> {/* Display the ChessGame component */}
     </>
   );
 }
