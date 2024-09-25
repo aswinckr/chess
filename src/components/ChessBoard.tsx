@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Chessboard } from "react-chessboard";
 import { Chess } from "chess.js";
+import BoardImage from "@/public/images/Board.png"; // Import the image
 
 const ChessBoard = () => {
   const [game, setGame] = useState(new Chess());
@@ -21,6 +22,8 @@ const ChessBoard = () => {
     return true;
   };
 
+  console.log(BoardImage.src); // Log the image URL to ensure it's correct
+
   return (
     <div
       style={{
@@ -30,8 +33,21 @@ const ChessBoard = () => {
         height: "100vh",
       }}
     >
-      <div style={{ width: "500px", height: "500px" }}>
-        <Chessboard position={game.fen()} onPieceDrop={onDrop} />
+      <div
+        style={{
+          width: "500px",
+          height: "500px",
+        }}
+      >
+        <Chessboard
+          position={game.fen()}
+          onPieceDrop={onDrop}
+          customBoardStyle={{
+            backgroundImage: `url(${BoardImage.src})`,
+            backgroundSize: "cover",
+            backgroundRepeat: "no-repeat",
+          }}
+        />
       </div>
     </div>
   );
