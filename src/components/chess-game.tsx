@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Chess, Square as ChessSquare, Piece as ChessPiece } from "chess.js";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
+import toast from "react-hot-toast";
 
 // Chess piece SVG components
 const King = ({ color }: { color: "white" | "black" }) => (
@@ -273,10 +274,18 @@ export function ChessGame() {
   );
 
   const handleMove = (from: string, to: string) => {
-    const move = game.move({ from, to });
-    if (move) {
-      setGame(new Chess(game.fen()));
-      setCurrentPlayer(currentPlayer === "white" ? "black" : "white");
+    try {
+      const move = game.move({ from, to });
+      if (move) {
+        const newGame = new Chess(game.fen());
+        setGame(newGame);
+        setCurrentPlayer(newGame.turn() === "w" ? "white" : "black");
+      } else {
+        toast.error("Wrong move");
+      }
+    } catch (error) {
+      toast.error("Wrong move");
+      console.error(error);
     }
   };
 
