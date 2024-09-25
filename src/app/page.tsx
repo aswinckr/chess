@@ -1,10 +1,9 @@
-import Image from "next/image";
-import ChessGame from "@/components/chess-game";
+import ChessBoard from "@/components/ChessBoard";
 
 export default function Home() {
   return (
     <>
-      <ChessGame />
+      <ChessBoard />
     </>
   );
 }
