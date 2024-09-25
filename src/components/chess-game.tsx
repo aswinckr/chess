@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
-import { Chess, Square as ChessSquare, Piece as ChessPiece } from "chess.js"; // Import the Chess class and types from chess.js
+import { Chess, Square as ChessSquare, Piece as ChessPiece } from "chess.js";
+import { DndProvider, useDrag, useDrop } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 
 // Chess piece SVG components
 const King = ({ color }: { color: "white" | "black" }) => (
@@ -173,77 +175,135 @@ type Piece = {
 
 type Square = Piece | null;
 
+const renderPiece = (piece: ChessPiece) => {
+  switch (piece.type) {
+    case "k":
+      return <King color={piece.color === "w" ? "white" : "black"} />;
+    case "q":
+      return <Queen color={piece.color === "w" ? "white" : "black"} />;
+    case "r":
+      return <Rook color={piece.color === "w" ? "white" : "black"} />;
+    case "b":
+      return <Bishop color={piece.color === "w" ? "white" : "black"} />;
+    case "n":
+      return <Knight color={piece.color === "w" ? "white" : "black"} />;
+    case "p":
+      return <Pawn color={piece.color === "w" ? "white" : "black"} />;
+    default:
+      return null;
+  }
+};
+
+const DraggablePiece = ({
+  piece,
+  position,
+}: {
+  piece: ChessPiece;
+  position: string;
+}) => {
+  const [{ isDragging }, drag] = useDrag(() => ({
+    type: "CHESS_PIECE",
+    item: { piece, position },
+    collect: (monitor) => ({
+      isDragging: !!monitor.isDragging(),
+    }),
+  }));
+
+  return (
+    <div
+      ref={drag as unknown as React.RefObject<HTMLDivElement>}
+      style={{
+        opacity: isDragging ? 0.5 : 1,
+        cursor: "move",
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        position: "relative",
+        zIndex: 1,
+      }}
+    >
+      {renderPiece(piece)}
+    </div>
+  );
+};
+
+const BoardSquare = ({
+  piece,
+  position,
+  onDrop,
+  isBlack,
+}: {
+  piece: ChessPiece | null;
+  position: string;
+  onDrop: (from: string, to: string) => void;
+  isBlack: boolean;
+}) => {
+  const [{ isOver }, drop] = useDrop(() => ({
+    accept: "CHESS_PIECE",
+    drop: (item: { position: string }) => {
+      onDrop(item.position, position);
+    },
+    collect: (monitor) => ({
+      isOver: !!monitor.isOver(),
+    }),
+  }));
+
+  return (
+    <div
+      ref={drop as unknown as React.RefObject<HTMLDivElement>}
+      className={`w-12 h-12 relative ${
+        isBlack ? "bg-gray-400" : "bg-gray-200"
+      } ${isOver ? "bg-blue-200" : ""}`}
+    >
+      {piece && (
+        <div className="absolute top-0 left-0 w-full h-full">
+          <DraggablePiece piece={piece} position={position} />
+        </div>
+      )}
+    </div>
+  );
+};
+
 export function ChessGame() {
-  const [game, setGame] = useState(new Chess()); // Initialize the Chess game
-  const [selectedPiece, setSelectedPiece] = useState<{
-    row: number;
-    col: number;
-  } | null>(null);
+  const [game, setGame] = useState(new Chess());
   const [currentPlayer, setCurrentPlayer] = useState<"white" | "black">(
     "white"
   );
 
-  const handleSquareClick = (row: number, col: number) => {
-    const square = (String.fromCharCode(97 + col) + (8 - row)) as ChessSquare; // Convert to chess notation and cast to ChessSquare
-    if (selectedPiece) {
-      const fromSquare = (String.fromCharCode(97 + selectedPiece.col) +
-        (8 - selectedPiece.row)) as ChessSquare;
-      const move = game.move({ from: fromSquare, to: square });
-      if (move) {
-        setGame(new Chess(game.fen())); // Update the game state
-        setSelectedPiece(null);
-        setCurrentPlayer(currentPlayer === "white" ? "black" : "white");
-      } else {
-        setSelectedPiece(null);
-      }
-    } else {
-      const piece = game.get(square);
-      if (piece && piece.color === currentPlayer[0]) {
-        setSelectedPiece({ row, col });
-      }
-    }
-  };
-
-  const renderPiece = (piece: ChessPiece) => {
-    switch (piece.type) {
-      case "k":
-        return <King color={piece.color === "w" ? "white" : "black"} />;
-      case "q":
-        return <Queen color={piece.color === "w" ? "white" : "black"} />;
-      case "r":
-        return <Rook color={piece.color === "w" ? "white" : "black"} />;
-      case "b":
-        return <Bishop color={piece.color === "w" ? "white" : "black"} />;
-      case "n":
-        return <Knight color={piece.color === "w" ? "white" : "black"} />;
-      case "p":
-        return <Pawn color={piece.color === "w" ? "white" : "black"} />;
+  const handleMove = (from: string, to: string) => {
+    const move = game.move({ from, to });
+    if (move) {
+      setGame(new Chess(game.fen()));
+      setCurrentPlayer(currentPlayer === "white" ? "black" : "white");
     }
   };
 
   return (
-    <Card className="p-4">
-      <div className="grid grid-cols-8 gap-0 w-96 h-96">
-        {game.board().map((row, rowIndex) =>
-          row.map((square, colIndex) => (
-            <div
-              key={`${rowIndex}-${colIndex}`}
-              className={`w-12 h-12 flex items-center justify-center ${
-                (rowIndex + colIndex) % 2 === 0 ? "bg-gray-200" : "bg-gray-400"
-              } ${
-                selectedPiece?.row === rowIndex &&
-                selectedPiece?.col === colIndex
-                  ? "border-2 border-blue-500"
-                  : ""
-              }`}
-              onClick={() => handleSquareClick(rowIndex, colIndex)}
-            >
-              {square && renderPiece(square)}
-            </div>
-          ))
-        )}
-      </div>
-      <div className="mt-4 text-center">Current player: {currentPlayer}</div>
-    </Card>
+    <DndProvider backend={HTML5Backend}>
+      <Card className="p-4">
+        <div className="grid grid-cols-8 gap-0 w-96 h-96">
+          {game.board().map((row, rowIndex) =>
+            row.map((square, colIndex) => {
+              const position = `${String.fromCharCode(97 + colIndex)}${
+                8 - rowIndex
+              }` as ChessSquare;
+              const isBlack = (rowIndex + colIndex) % 2 !== 0;
+              return (
+                <BoardSquare
+                  key={position}
+                  piece={square}
+                  position={position}
+                  onDrop={handleMove}
+                  isBlack={isBlack}
+                />
+              );
+            })
+          )}
+        </div>
+        <div className="mt-4 text-center">Current player: {currentPlayer}</div>
+      </Card>
+    </DndProvider>
   );
 }
