@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Chess, Square as ChessSquare, Piece as ChessPiece } from "chess.js";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
@@ -191,9 +191,11 @@ const renderPiece = (piece: ChessPiece) => {
 const DraggablePiece = ({
   piece,
   position,
+  onPieceSelect,
 }: {
   piece: ChessPiece;
   position: string;
+  onPieceSelect: (position: string) => void;
 }) => {
   const [{ isDragging }, drag] = useDrag(() => ({
     type: "CHESS_PIECE",
@@ -203,9 +205,18 @@ const DraggablePiece = ({
     }),
   }));
 
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      e.preventDefault();
+      onPieceSelect(position);
+    },
+    [onPieceSelect, position]
+  );
+
   return (
     <div
       ref={drag as unknown as React.RefObject<HTMLDivElement>}
+      onTouchStart={handleTouchStart}
       style={{
         opacity: isDragging ? 0.5 : 1,
         cursor: "move",
@@ -227,12 +238,16 @@ const BoardSquare = ({
   piece,
   position,
   onDrop,
+  onSquareSelect,
   isBlack,
+  isSelected,
 }: {
   piece: ChessPiece | null;
   position: string;
   onDrop: (from: string, to: string) => void;
+  onSquareSelect: (position: string) => void;
   isBlack: boolean;
+  isSelected: boolean;
 }) => {
   const [{ isOver }, drop] = useDrop(() => ({
     accept: "CHESS_PIECE",
@@ -244,16 +259,25 @@ const BoardSquare = ({
     }),
   }));
 
+  const handleClick = useCallback(() => {
+    onSquareSelect(position);
+  }, [onSquareSelect, position]);
+
   return (
     <div
       ref={drop as unknown as React.RefObject<HTMLDivElement>}
+      onClick={handleClick}
       className={`w-12 h-12 relative ${
         isBlack ? "bg-gray-400" : "bg-gray-200"
-      } ${isOver ? "bg-blue-200" : ""}`}
+      } ${isOver ? "bg-blue-200" : ""} ${isSelected ? "bg-yellow-200" : ""}`}
     >
       {piece && (
         <div className="absolute top-0 left-0 w-full h-full">
-          <DraggablePiece piece={piece} position={position} />
+          <DraggablePiece
+            piece={piece}
+            position={position}
+            onPieceSelect={onSquareSelect}
+          />
         </div>
       )}
     </div>
@@ -265,6 +289,7 @@ export function ChessGame() {
   const [currentPlayer, setCurrentPlayer] = useState<"white" | "black">(
     "white"
   );
+  const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
 
   const handleMove = (from: string, to: string) => {
     try {
@@ -273,12 +298,27 @@ export function ChessGame() {
         const newGame = new Chess(game.fen());
         setGame(newGame);
         setCurrentPlayer(newGame.turn() === "w" ? "white" : "black");
+        setSelectedSquare(null);
       } else {
-        toast.error("Wrong move");
+        toast.error("Invalid move");
       }
     } catch (error) {
-      toast.error("Wrong move");
+      toast.error("Invalid move");
       console.error(error);
+    }
+  };
+
+  const handleSquareSelect = (position: string) => {
+    if (selectedSquare === null) {
+      const piece = game.get(position as ChessSquare);
+      if (piece && piece.color === game.turn()) {
+        setSelectedSquare(position);
+      }
+    } else {
+      if (position !== selectedSquare) {
+        handleMove(selectedSquare, position);
+      }
+      setSelectedSquare(null);
     }
   };
 
@@ -298,7 +338,9 @@ export function ChessGame() {
                   piece={square}
                   position={position}
                   onDrop={handleMove}
+                  onSquareSelect={handleSquareSelect}
                   isBlack={isBlack}
+                  isSelected={position === selectedSquare}
                 />
               );
             })
