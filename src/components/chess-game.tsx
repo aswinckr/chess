@@ -174,8 +174,6 @@ type Piece = {
   color: "white" | "black";
 };
 
-type Square = Piece | null;
-
 const renderPiece = (piece: ChessPiece) => {
   switch (piece.type) {
     case "k":
