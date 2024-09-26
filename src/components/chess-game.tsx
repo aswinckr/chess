@@ -169,11 +169,6 @@ const Pawn = ({ color }: { color: "white" | "black" }) => (
   </svg>
 );
 
-type Piece = {
-  type: "king" | "queen" | "rook" | "bishop" | "knight" | "pawn";
-  color: "white" | "black";
-};
-
 const renderPiece = (piece: ChessPiece) => {
   switch (piece.type) {
     case "k":
